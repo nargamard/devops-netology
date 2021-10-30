@@ -32,3 +32,5 @@ override.tf.json
 
 terraform.rc
 Будет проигнорирован файл terraform.rc
+
+new line
