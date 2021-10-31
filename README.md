@@ -34,3 +34,6 @@ terraform.rc
 Будет проигнорирован файл terraform.rc
 
 new line
+and another new line
+
+Добавим строчку и закоммитим из pyCharm
