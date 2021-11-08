@@ -1,0 +1,78 @@
+1. Найдите полный хеш и комментарий коммита, хеш которого начинается на aefea
+    git show aefea
+
+    Полный хэш: aefead2207ef7e2aa5dc81a34aedf0cad4c32545
+    Комментарий:     Update CHANGELOG.md
+
+
+2. Какому тегу соответствует коммит 85024d3?
+    git show 85024d3
+
+    тег: v0.12.23
+    (commit 85024d3100126de36331c6982bfaac02cdab9e76 (tag: v0.12.23))
+
+3. Сколько родителей у коммита b8d720? Напишите их хеши.
+
+    Если хотим узанть, количество родителей, то делаем
+    git show --pretty=%p b8d720 | wc -w
+    где для коммита b8d720 посчитаем количество слов
+    получается 2 родителя
+
+    Если хотим получить их хэши, то:
+    git show --pretty=%p b8d720
+    и получаем
+    56cd7859e 9ea88f22f
+
+4. Перечислите хеши и комментарии всех коммитов которые были сделаны между тегами v0.12.23 и v0.12.24
+
+    делаем
+    git log v0.12.23^..v0.12.24 --oneline
+    чтобы получить все коммиты в сокращенном виде (--oneline) между заданными тегами (..), включая сами коммиты с тегами (^)
+    Или то же самое без --oneline, чтобы подробнее.
+
+    33ff1c03b (tag: v0.12.24) v0.12.24
+    b14b74c49 [Website] vmc provider links
+    3f235065b Update CHANGELOG.md
+    6ae64e247 registry: Fix panic when server is unreachable
+    5c619ca1b website: Remove links to the getting started guide's old location
+    06275647e Update CHANGELOG.md
+    d5f9411f5 command: Fix bug when using terraform login on Windows
+    4b6d06cc5 Update CHANGELOG.md
+    dd01a3507 Update CHANGELOG.md
+    225466bc3 Cleanup after v0.12.23 release
+    85024d310 (tag: v0.12.23) v0.12.23
+
+5. Найдите коммит в котором была создана функция func providerSource.
+
+    Можно просто поискать коммиты, в которых функция была добавлена или удалена. Тогда делаем  git log -S 'func providerSource' --oneline
+    Если же надо посмотреть, что именно с ней происходило, тогда делаем
+    git log -S 'func providerSource' -p
+    В результате видим, что в более раннем коммите 8c928e83589d90a031f811fae52a81be7153e82f от 02.04.2020 есть строчки
+    +func providerSource(services *disco.Disco)
+    и так далее.
+
+    Значит, впервые эта функция появилась именно в коммите 8c928e83589d90a031f811fae52a81be7153e82f
+
+6. Найдите все коммиты в которых была изменена функция globalPluginDirs.
+
+    Сначала найдём файл, где определена нужная функция, так: git grep --count 'func globalPluginDirs'
+    Получим, что такая функция найдена в файле plugins.go
+
+    Теперь посмотрим изменения в теле функции так:
+    git log -L :globalPluginDirs:plugins.go
+    И получим, что функция менялась в коммитах:
+    78b12205587fe839f10d946ea3fdc06719decb05
+    52dbf94834cb970b510f2fba853a5b49ad9b1a46
+    41ab0aef7a0fe030e84018973a64135b11abcd70
+    66ebff90cdfaa6938f26f908c7ebad8d547fea17
+    8364383c359a6b738a436d1b7745ccdce178df47
+
+    Там же написано для каждого коммита, что именно было изменено.
+
+7. Кто автор функции synchronizedWriters
+
+    Делаем git log -S 'synchronizedWriters' и видим, что появилась функция в коммите 5ac311e2a91e381e2f52234668b49ba670aa0fe5
+    и её автор - господин Martin Atkins со странной почтой <mart@degeneration.co.uk>
+    Добавил функцию вот тогда: Wed May 3 16:25:41 2017
+
+    А в 2020 году товарищ James Bardin эту функию убил и написал, что просто удалил неиспользуемое.
