@@ -1,0 +1,80 @@
+так-так...
+У меня Альт на хосте. Значит, качаем rpm для CentOS. Для Альта-то парсонально не припасено. А в штатных репах не имеется.
+Ставим.
+Создаём  директорию для конфы.
+vargant init
+Меняем содержимое файла vagrantfile методом ctrl+c, ctrl+v
+vagrant up
+Работает машинка.
+А вот в графике VirtualBox её нет.
+Блин. Горелый. Под рутом всё делал.
+Ладно. Заново.
+vagrant destroy
+chown на директорию с конфой и на /opt/vagrant
+vagrant up
+Готово.
+То были 1-4 пункты задания.
+
+Открываем графику... какая интересная тут у нас машинка работает...
+5. У неё есть 1024Mb RAM и 2 ядра, ест сеть (NAT), общая папка (та самая, где конфа)
+
+6. Посмотрим документацию к vagrant. Много чего есть, но в том числе и не просторах, но нам надо то, что в конце.
+Никто нам не мешает добавить в vagrantfile строчки
+config.vm.provider "virtualbox" do |v|
+  v.memory = 2048
+  v.cpus = 2
+end
+Пусть памяти больше станет. Теперь пересоздадим машинку с новой настройкой.
+vagrant destroy
+vagrant up
+Ну так и получилось. Прикольно за созданием наблюдать глядя на работающий на втором мониторе графический интерфейс VirtualBox.
+
+7. Лезем в эту виртуалку
+vagrant ssh
+Залезли. Погоняли разные команды.
+
+8. Дальше. Лезем в man bash. Там / history
+читаем... беда с английским, но всё же находим, что в shell variables есть описание переменной HISTSIZE в строке 635 (-N, чтобы номера строк отобразились). Там написано, что
+The  number  of  commands to remember in the command history (see HISTORY below).  If the value is 0, commands are not saved in the history list.  Numeric values less than zero result in
+              every command being saved on the history list (there is no limit).  The shell sets the default value to 500 after reading any startup files.
+Ну и поставим, к примеру, 100 команд: export HISTSIZE=100
+
+Теперь ищем / ignoreboth
+И находим, что это сокрещение для ignorespace и ignoredups. Про них тут же написано, в описании переменной HISTCONTROL. Не будут записываться команды, которые начинаются с пробела или являются дублем предыдущей.
+
+9. Теперь переходим к фигурным скобкам {}. Ищем так /\{, где \ - экран для скобки, поскольку она - зарезервированный символ. Задно узнаём, что фигурные скобки называют brace.
+На строке 802 начинается пукт об этом. Использовать это надо для сокрщения команд. В инструкции это называется наоборот, расширениями. Внутри скобок - последовательность. Например, a{d,c,b}e даст ade ace abe. Вот прямо пример из man.
+Так можно одной командой создать, к примеру, несколько файлов, где внутри brace надо написать переменную часть имени этиъ файлов. Скобки могут быть вложенными, получится конструкция посложнее.
+
+10. Делаем touch {1..100000} и получем 100 тыс. файлов. 300 тыс. файлов так создать нельзя 0 будет ругаться, что Argument list too long
+Лечится изменением лимита: ulimit -s xxx (ulimit -a показывает, что stack size 8192, вот и не умещается 300 тыс аргументов).
+
+11. В строке 215 man сказано, что [[]] проверяет условие и возвращает 0 или 1.
+[[ -d /tmp] проверяет, существует ли /tmp. Если надо проверить, существует ли файл, то тогда [[ -f <filename>]]
+
+12. Если нам надо, чтобы в $PATH был путь /tmp/new_path_directory/bash, то:
+    - создадим директорию mkdir /tmp/new_path_directory
+    - скопируем туда файл bash так: cp /bin/bash /tmp/new_path_directory/
+    - и засунем командой export путь в переменную $PATH так: export PATH=/tmp/new_path_directory/:$PATH
+
+И вот такой вывод имеем:
+
+vagrant@vagrant:/tmp/new_path_directory$ type -a bash
+bash is /tmp/new_path_directory/bash
+bash is /usr/bin/bash
+bash is /bin/bash
+bash is /tmp/new_path_directory/bash
+vagrant@vagrant:/tmp/new_path_directory$
+
+2 раза bash is /tmp/new_path_directory/bash потому, что сначал я делал export PATH=$PATH:/tmp/new_path_directory/
+а потом PATH=/tmp/new_path_directory/:$PATH, при этом новый путь выводится первым. Надо почитать, где об этом написано, почему так.
+
+13. В man at сказано, что:
+at and batch read commands from standard input or a specified file which are to be executed at a later time, using /bin/sh.
+at      executes commands at a specified time.
+batch   executes commands when system load levels permit; in other words, when the load average drops below 1.5, or the value specified in the invocation of atd.
+
+Это означает, что at выполняет команду в заданное время, а batch учитывает загрузку системы, когда средняя загрузка ниже 1,5 тогда  команды выполняются.
+
+14. vagrant halt
+Отбой. Останов машины.
