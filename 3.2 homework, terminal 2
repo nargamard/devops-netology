@@ -1,0 +1,180 @@
+1. Какого типа команда cd?
+Сейчас узнаем: type cd
+Вот, написано, что cd is a shell builtin. Что означает, что это втроенная команда оболочки.
+Если бы cd ещё была исполняемым файлом, то type cd -t вернуло бы file, а type -p выдало бы путь к этому файлу.
+
+2. Команда grep <some_string> <some_file> | wc -l работает так: grep ищет <some_string> в <some_file> и передаёт на вход команде wc, которая с -l считает количество строк.
+Однако ж, в man grep сказано, что grep с ключом -c сама посчитает количество вхождений, что нам и надо.
+
+3. Процесс с PID 1, родитель всех процессов - это systemd. Проверим: pstree -p
+systemd(1)─┬─VBoxService(1057)─┬─{VBoxService}(1059)
+           │                   ├─{VBoxService}(1060)
+           │                   ├─{VBoxService}(1061)
+           │                   ├─{VBoxService}(1062)
+           │                   ├─{VBoxService}(1063)
+           │                   ├─{VBoxService}(1064)
+           │                   ├─{VBoxService}(1065)
+           │                   └─{VBoxService}(1067)
+           ├─accounts-daemon(573)─┬─{accounts-daemon}(581)
+           │                      └─{accounts-daemon}(636)
+           ├─agetty(689)
+           ├─atd(665)
+           ├─cron(658)
+           ├─dbus-daemon(575)
+           ├─irqbalance(594)───{irqbalance}(606)
+           ├─multipathd(519)─┬─{multipathd}(520)
+           │                 ├─{multipathd}(521)
+           │                 ├─{multipathd}(522)
+           │                 ├─{multipathd}(523)
+           │                 ├─{multipathd}(524)
+           │                 └─{multipathd}(525)
+           ├─networkd-dispat(597)
+           ├─polkitd(672)─┬─{polkitd}(681)
+           │              └─{polkitd}(685)
+           ├─rpcbind(551)
+           ├─rsyslogd(599)─┬─{rsyslogd}(617)
+           │               ├─{rsyslogd}(618)
+           │               └─{rsyslogd}(619)
+           ├─sshd(644)───sshd(1092)───sshd(1133)───bash(1134)───pstree(1225)
+           ├─systemd(1102)───(sd-pam)(1104)
+           ├─systemd-journal(349)
+           ├─systemd-logind(608)
+           ├─systemd-network(383)
+           ├─systemd-resolve(554)
+           └─systemd-udevd(377)
+
+4. Что у нас за терминал?
+tty
+/dev/pts/0
+
+Откроем второй.
+tty
+/dev/pts/1
+
+Какие ошибки могут быть при выполнении команды ls? Полезем, например, смотреть каталог /root, куда нас не пустят.
+Делаем так:
+ls -l /root 2>/dev/pts/1
+После ls -l /root команда 2>/dev/pts/1 означает, что "2" (stderr) > (направить в) /dev/pts/1 (файл второго терминала, который создан при его открытии).
+
+5. Допустим, есть у нас такой файл для пример такой:
+
+vagrant@vagrant:~$ cat testfile
+test
+best
+test
+cast
+test
+beer
+
+Теперь так:
+vagrant@vagrant:~$ grep -c "beer" <testfile >testresult && cat testresult
+1
+<filename означает, что на stdin файл
+>filename означает, что stdout в файл
+
+Если в скрипте будем брать из файла, то можно сказать, что стандартынй ввод теперь такой-то файл так:
+exec 0<такой-то\ файл
+
+6. Получится, конечно вывести данные из pty в tty. Поскольку для tty тоже есть файл. Например,
+Лезем в tty2 (Ctrl+Alt+2), логинимся по тем же юзером.
+Возвращаемся обратно, делаем echo "something" >/dev/tty2
+Снова идём в tty2 и смотрим, что там написано. Обратно тоже так можно.
+
+7. Команда bash 5>&1 создаёт дескриптор 5 и перенаправляет его на стандартный вывод 1 (stdout).
+Потом команда echo netology > /proc/$$/fd/5 отправит "netology" в дескриптор 5 (fd/5), который создан в текущей сессии (proc/$$).
+Дескриптор можно увидеть в файловой системе, если командой echo $$ узнать дескриптор сессии, потом пойти в /proc/<узнанный номер сессии>/fd/
+И там будет 0, 1, 2, 255 и наш 5
+Всё это будет работать только в текущей сессии, в другой сессии $$ будет другой и там дескриптора 5 не будет.
+
+8. Если в | передаётся только stdout, значит надо stderr перенаправить в stdout так: 2>&1
+При этом надо куда-то деть stdout. Например, сделать дескриптор 5 и направить его в stderr: 5>&2
+Теперь ошибки идут в stdout и следом в pipe, в stderr идёт дескриптор 5, осталось только направить в него стандартный вывод: 1>&5
+Таким образом поменяли местами:
+vagrant@vagrant:/proc/1147/fd$ cd /root 2>&1 5>&2 1>&5 | grep Per
+bash: cd: /root: Permission denied
+
+9. Команда cat /proc/$$/environ выведет переменные окружения. Можно найти дескриптор текущей сессии (echo $$), пойти в /proc/$$, там посмотреть файл environ
+Ещё можно воспользоваться командой env, она тоже выведет все переменные окружения.
+
+10. Делаем man proc, потом /cmdline и видим на строке 221, что:
+  /proc/[pid]/cmdline
+              This  read-only file holds the complete command line for the process, unless the process is a zombie.  In the
+              latter case, there is nothing in this file: that is, a read on this file will return 0 characters.  The  com‐
+              mand-line  arguments  appear  in this file as a set of strings separated by null bytes ('\0'), with a further
+              null byte after the last string.
+Сие значит, что это файл только для чтения, в котором содержится командная строка для процесса, если только он не зомби (в этом случае там 0). Аргументы командной строки отображаются в виде набора строк, разделённые '\0'
+
+А на 275 строке написано про
+/proc/[pid]/exe
+              Under Linux 2.2 and later, this file is a symbolic link containing the actual pathname of the  executed  com‐
+              mand.   This symbolic link can be dereferenced normally; attempting to open it will open the executable.  You
+              can even type /proc/[pid]/exe to run another copy of the same executable that is being run by process  [pid].
+              If  the  pathname  has  been  unlinked, the symbolic link will contain the string '(deleted)' appended to the
+              original pathname.  In a multithreaded process, the contents of this symbolic link are not available  if  the
+              main thread has already terminated (typically by calling pthread_exit(3)).
+
+              Permission  to  dereference  or  read  (readlink(2))  this  symbolic link is governed by a ptrace access mode
+              PTRACE_MODE_READ_FSCREDS check; see ptrace(2).
+
+              Under Linux 2.0 and earlier, /proc/[pid]/exe is a pointer to the binary which was executed, and appears as  a
+              symbolic link.  A readlink(2) call on this file under Linux 2.0 returns a string in the format:
+
+                  [device]:inode
+
+              For  example, [0301]:1502 would be inode 1502 on device major 03 (IDE, MFM, etc. drives) minor 01 (first par‐
+              tition on the first drive).
+
+              find(1) with the -inum option can be used to locate the file.
+
+Там лежит символическая ссылка, содержащая фактический путь к выполняемой в процессе команде.
+
+11. Сейчас посмотрим, что там с SSE у камня.
+vagrant@vagrant:/proc/1147$ less /proc/cpuinfo | grep sse
+flags           : fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm constant_tsc rep_good nopl cpuid tsc_known_freq pni ssse3 cx16 sse4_1 x2apic hypervisor lahf_lm pti
+flags           : fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx lm constant_tsc rep_good nopl cpuid tsc_known_freq pni ssse3 cx16 sse4_1 x2apic hypervisor lahf_lm pti
+
+Вот, очевидно, sse4_1 самая старшая
+
+12. Я так понял, что надо подключившись к машине по ssh подключиться из этой сессии к этой же машине по ssh ещё раз.
+На просторах интернета найдено, что при запуске команды на удаленном компьютере с использованием ssh TTY не выделяется для удаленного сеанса.
+В man ssh сказано, что
+-t Force pseudo-terminal allocation.  This can be used to execute arbitrary screen-based programs on a remote ma‐
+             chine, which can be very useful, e.g. when implementing menu services.  Multiple -t options force tty alloca‐
+             tion, even if ssh has no local tty.
+Значит, надо запускать ssh с флагом -t, тогда всё получится.
+
+13. Попробовал, установив reptyr вначале.
+И вот:
+vagrant@vagrant:~/.ssh$ pgrep journalctl
+1642
+vagrant@vagrant:~/.ssh$ reptyr 1642
+Unable to attach to pid 1642: Operation not permitted
+The kernel denied permission while attaching. If your uid matches
+the target's, check the value of /proc/sys/kernel/yama/ptrace_scope.
+For more information, see /etc/sysctl.d/10-ptrace.conf
+vagrant@vagrant:~/.ssh$
+
+А если с -L, то вот:
+vagrant@vagrant:~/.ssh$ reptyr -L 1642
+Opened a new pty: /dev/pts/5
+
+Лезем в man reptyr, там есть ссылка на https://github.com/nelhage/reptyr.
+А там сказано, что reptyr depends on the ptrace system call to attach to the remote program. On Ubuntu Maverick and higher, this ability is disabled by default for security reasons. You can enable it temporarily by doing
+
+# echo 0 > /proc/sys/kernel/yama/ptrace_scope
+
+as root, or permanently by editing the file /etc/sysctl.d/10-ptrace.conf, which also contains more information about exactly what this setting accomplishes.
+
+То есть, меняем в  /etc/sysctl.d/10-ptrace.conf 1 на 0, сохраняем и радуемся жизни.
+
+Пробуем теперь так:
+sudo reptyr -T 1642
+и получаем:
+vagrant@vagrant:~$ Nov 16 19:32:54 vagrant sudo[1711]:  vagrant : TTY=pts/1 ; PWD=/home/vagrant ; USER=root ; COMMAND=/usr/bin/reptyr -T 1642
+Nov 16 19:32:54 vagrant sudo[1711]: pam_unix(sudo:session): session opened for user root by vagrant(uid=0)
+Nov 16 19:32:54 vagrant sudo[1711]: pam_unix(sudo:session): session closed for user root
+Работает.
+
+14. В man tee сказано, что: tee - read from standard input and write to standard output and files
+То есть, tee берёт данные из стандартного входа и выводит в stdout и в файл.
+В примере echo string | sudo tee /root/new_file команда tee сама запущена от рута, потому и может записать в файл. В то время как в первом примере под sudo выполняется только команда echo.
