@@ -1,0 +1,171 @@
+1.
+Делаем strace /bin/bash -c 'cd /tmp' 2>&1 | grep cd
+где перенаправляем вывод stderr в stdout, который даём grep, чтобы найти там cd
+И находим вот что:
+execve("/bin/bash", ["/bin/bash", "-c", "cd /tmp"], 0x7ffdbd083f50 /* 24 vars */) = 0
+
+Но это относится к запуску cd (execve), а не к самому cd.
+
+Тогда делаем:
+vagrant@vagrant:~$ strace /bin/bash -c 'cd /tmp' 2>&1 | grep "/tmp"
+То есть, ищем в вызовах "/tmp"
+И получаем:
+vagrant@vagrant:~$ strace /bin/bash -c 'cd /tmp' 2>&1 | grep "/tmp"
+execve("/bin/bash", ["/bin/bash", "-c", "cd /tmp"], 0x7ffce7a8c560 /* 24 vars */) = 0
+stat("/tmp", {st_mode=S_IFDIR|S_ISVTX|0777, st_size=4096, ...}) = 0
+chdir("/tmp")
+
+Вот, chdir("/tmp") - это как раз похоже на вызов самого cd
+
+2. Делаем strace file /dev/tty и видим кучу всего. Из этого всего видно, что какие-либо файлы открываются так: openat(
+Теперь, чтобы много не читать, делаем strace file /dev/tty 2>&1 | grep openat
+И получаем:
+vagrant@vagrant:~$ strace file /dev/tty 2>&1 | grep openat
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libmagic.so.1", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/liblzma.so.5", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libbz2.so.1.0", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libz.so.1", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libpthread.so.0", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, "/usr/lib/locale/locale-archive", O_RDONLY|O_CLOEXEC) = 3
+openat(AT_FDCWD, "/etc/magic.mgc", O_RDONLY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/etc/magic", O_RDONLY) = 3
+openat(AT_FDCWD, "/usr/share/misc/magic.mgc", O_RDONLY) = 3
+openat(AT_FDCWD, "/usr/lib/x86_64-linux-gnu/gconv/gconv-modules.cache", O_RDONLY) = 3
+
+Из этого можно предположить, что на обращение к какой-то базе данных похоже вот это:
+openat(AT_FDCWD, "/etc/magic", O_RDONLY) = 3
+openat(AT_FDCWD, "/usr/share/misc/magic.mgc", O_RDONLY) = 3
+
+В man file тоже написано, что в файлах magic хранится инфа.
+Кроме того, в выводе
+vagrant@vagrant:~$ strace file /dev/tty 2>&1 | grep stat
+Есть строки
+stat("/home/vagrant/.magic.mgc", 0x7ffe96970f00) = -1 ENOENT (No such file or directory)
+stat("/home/vagrant/.magic", 0x7ffe96970f00) = -1 ENOENT (No such file or directory)
+stat("/etc/magic", {st_mode=S_IFREG|0644, st_size=111, ...}) = 0
+Отсюда видно, что использован файл "/etc/magic"
+
+3.
+Запускаем ping -i 5 localhost >log
+Открываем второй терминал, там ищем pid:
+vagrant@vagrant:~$ pgrep ping
+1472
+
+Теперь ищем (под рутом), что процесс открыл:
+vagrant@vagrant:~$ sudo lsof -p 1472
+А в выводе видим в том числе вот это:
+ping    1472 vagrant    1w   REG  253,0     2853 131091 /home/vagrant/log
+Удаляем.
+После чего видим вот это:
+ping    1472 vagrant    1w   REG  253,0     6763 131091 /home/vagrant/log (deleted)
+
+Посмотрим на него:
+vagrant@vagrant:sudo ls -l /proc/1472/fd
+total 0
+lrwx------ 1 root root 64 Nov 21 17:14 0 -> /dev/pts/0
+l-wx------ 1 root root 64 Nov 21 17:14 1 -> '/home/vagrant/log (deleted)'
+lrwx------ 1 root root 64 Nov 21 17:14 2 -> /dev/pts/0
+lrwx------ 1 root root 64 Nov 21 17:14 3 -> 'socket:[30389]'
+lrwx------ 1 root root 64 Nov 21 17:14 4 -> 'socket:[30390]'
+
+И в него залезем: sudo less /proc/1472/fd/1
+Не буду приводить здесь, но там уже немало.
+А теперь убьём это всё, отправив в файл ничего:
+vagrant@vagrant:~$ echo '' | sudo tee /proc/1472/fd/1
+
+4.
+Процесс зомби - это процесс, который завершился, но родительский процесс об этом не знает.
+Раз он завершился, то ресурсы не занимает, только в списке процессов висит.
+
+5.
+Установил по инструкции.
+Делаем:
+root@vagrant:~# /usr/sbin/opensnoop-bpfcc
+PID    COMM               FD ERR PATH
+1031   vminfo              4   0 /var/run/utmp
+575    dbus-daemon        -1   2 /usr/local/share/dbus-1/system-services
+575    dbus-daemon        18   0 /usr/share/dbus-1/system-services
+575    dbus-daemon        -1   2 /lib/dbus-1/system-services
+575    dbus-daemon        18   0 /var/lib/snapd/dbus-1/system-services/
+
+Вот то, что появилось в первую секунду.
+
+6.
+Делаем vagrant@vagrant:~$ strace uname -a
+И видим ближе к концу:
+uname({sysname="Linux", nodename="vagrant", ...}) = 0
+fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0
+uname({sysname="Linux", nodename="vagrant", ...}) = 0
+uname({sysname="Linux", nodename="vagrant", ...}) = 0
+Видимо, системный вызов uname - то, что нам надо.
+
+Ищем по нему в man:
+vagrant@vagrant:~$ man 2 uname
+No manual entry for uname in section 2
+
+Нет инфы. Но делаю то же на хостовой машине (Альт p9) и читаю вот что:
+52        Часть информации из структуры utsname может быть получена также через /proc/sys/kernel/ {ostype, hostname, osrelease, version, domainname}.
+
+Так. Поставил маны:
+50        Part of the utsname information is also accessible via /proc/sys/kernel/{ostype, hostname, osrelease, version, domainname}.
+
+7.
+ Курим man:
+man bash
+/&&
+AND and OR lists are sequences of one or more pipelines separated by the && and || control operators, respectively.  AND and OR lists are executed with left associativity.  An AND list has the form
+
+              command1 && command2
+
+       command2 is executed if, and only if, command1 returns an exit status of zero (success).
+Сие означает, что вторая команда будет выполняться только если первая вернёт 0, то есть выполнится успешно.
+
+А если через ";", то это просто последовательное выполнение команд.
+
+А про set -e сказано, что:
+ set [+abefhkmnptuvxBCEHPT] [+o option-name] [arg ...]
+              Without options, the name and value of each shell variable are displayed in a format that can be reused as input for setting or resetting the currently-set variables.  Read-only variables cannot  be  reset.
+              In  posix mode, only shell variables are listed.  The output is sorted according to the current locale.  When options are specified, they set or unset shell attributes.  Any arguments remaining after option
+              processing are treated as values for the positional parameters and are assigned, in order, to $1, $2, ...  $n.  Options, if specified, have the following meanings:
+                          -e      Exit immediately if a pipeline (which may consist of a single simple command), a list, or a compound command (see SHELL GRAMMAR above), exits with a non-zero status.  The shell does not exit if  the
+                      command  that  fails  is part of the command list immediately following a while or until keyword, part of the test following the if or elif reserved words, part of any command executed in a && or ||
+                      list except the command following the final && or ||, any command in a pipeline but the last, or if the command's return value is being inverted with !.  If a compound command other than a  subshell
+                      returns  a non-zero status because a command failed while -e was being ignored, the shell does not exit.  A trap on ERR, if set, is executed before the shell exits.  This option applies to the shell
+                      environment and each subshell environment separately (see COMMAND EXECUTION ENVIRONMENT above), and may cause subshells to exit before executing all the commands in the subshell.
+
+ То есть, set -e означает, что скрипт прекращается, если команда завершается с ошибкой.
+ То есть, смысла использоваться set -e с && нет, поскольку && и так не даст выполниться следущей команде, если вывод предыдущей отличается от 0.
+
+ 8.
+ Ищем: man bash
+ /popefail
+ Ибо set там много будет.
+ И выше смотрим, что там про set.
+      set [+abefhkmnptuvxBCEHPT] [+o option-name] [arg ...]
+              Without options, the name and value of each shell variable are displayed in a format that can be reused as input for setting or
+              resetting  the  currently-set variables.  Read-only variables cannot be reset.  In posix mode, only shell variables are listed.
+              The output is sorted according to the current locale.  When options are specified, they set or unset shell attributes.  Any ar‐
+              guments  remaining  after  option processing are treated as values for the positional parameters and are assigned, in order, to
+              $1, $2, ...  $n.  Options, if specified, have the following meanings:
+
+  В общем, set меняет поведение оболочки в зависимости от параметров. В скриптах полезно может быть, ибо:
+  -e завершит работу скрипта, если хотя бы одна команда даст ошибку;
+  -u проверит, если ли неопределенные переменные ("Treat  unset variables and parameters other than the special parameters "@" and "*" as an error when performing parameter expansion.") и не даст выполниться, если такие есть.
+  -x отправит в стандартный вывод все команды перед тем, как их выполнить. Полезно, если что-то не работает и надо отладить. Чтобы в скрипте явно echo не писать где попало, чтобы понять, где ж косяк.
+  -o pipefail проверяет, что не только последняя, а все команды в | выполнены нормально.
+
+  9.
+  Берём все процессы, сортируем и выводим в less
+  ps -A -o stat | sort | less
+Считать не будем, можно и так оценить, что почти все - разновидности S и I
+S    interruptible sleep (waiting for an event to complete) - спят, ждут завершения
+I    Idle kernel thread процессы ядра
+А про дополнительные символы сказано, что:
+               <    high-priority (not nice to other users)
+               N    low-priority (nice to other users)
+               L    has pages locked into memory (for real-time and custom IO)
+               s    is a session leader
+               l    is multi-threaded (using CLONE_THREAD, like NPTL pthreads do)
+               +    is in the foreground process group
