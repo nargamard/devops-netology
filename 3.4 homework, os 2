@@ -1,0 +1,205 @@
+1.
+Ставим node_exporter
+
+vagrant@vagrant:~$ wget https://github.com/prometheus/node_exporter/releases/download/v1.3.0/node_exporter-1.3.0.linux-amd64.tar.gz
+vagrant@vagrant:~$ tar xf node_exporter-1.3.0.linux-amd64.tar.gz
+
+В архиве один бинарник node_exporter.  Копируем его в /usr/local/bin
+Как по инструкции делаем юзера useradd --no-create-home --home-dir / --shell /bin/false node_exporter
+
+В /etc/systemd/system создаём файл: touch node_exporter.service
+Пишем туда:
+[Unit]
+Description=My Node Exporter
+
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+ExecStart=/usr/local/bin/node_exporter
+EnvironmentFile=-/etc/default/node_exporter -f $EXTRA_OPTS
+
+[Install]
+WantedBy=multi-user.target
+
+Сохраняем.
+
+Делаем файл /etc/default/node_exporter
+и даём на него права юзеру node_exporter
+sudo chown node_exporter:node_exporter node_exporter
+
+Велим systemd перечитать юниты:
+sudo systemctl daemon-reload
+
+Запускаем:
+sudo systemctl start node_exporter
+В автозагрузку его:
+sudo systemctl enable node_exporter
+Стопнем командой
+sudo systemctl stop node_exporter
+Выкинем из автозагрузки
+sudo systemctl disable node_exporter
+
+Включим снова:
+sudo systemctl enable --now node_exporter
+
+2.
+Вот что интересно посмотреть по:
+CPU
+node_cpu_seconds_total{cpu="0",mode="idle"}
+node_cpu_seconds_total{cpu="0",mode="iowait"}
+node_cpu_seconds_total{cpu="1",mode="idle"}
+node_cpu_seconds_total{cpu="1",mode="iowait"}
+
+RAM
+node_memory_MemTotal_bytes
+node_memory_MemAvailable_bytes
+
+Disk (для каждого устройства)
+node_disk_io_time_seconds_total{device="sda"}
+node_disk_read_bytes_total{device="sda"}
+node_disk_written_bytes_total{device="sda"}
+
+Net (для каждого интерфейса, кроме lo)
+node_network_receive_bytes_total{device="eth0"}
+node_network_receive_errs_total{device="eth0"}
+node_network_transmit_bytes_total{device="eth0"}
+node_network_transmit_errs_total{device="eth0"}
+
+Как делал... просто запихал вывод в less
+curl http://localhost:9100/metrics | less
+и искал во всём этом по cpu, memory и т.д.
+Про метрики надо больше почитать. Но пока вопрос в разделе "вопросы по заданию" остаётся без ответа.
+
+3. Ставим Netdata
+Файл /etc/netdata/netdata.conf выглядит так:
+
+# NetData Configuration
+
+# The current full configuration can be retrieved from the running
+# server at the URL
+#
+#   http://localhost:19999/netdata.conf
+#
+# for example:
+#
+#   wget -O /etc/netdata/netdata.conf http://localhost:19999/netdata.conf
+#
+
+[global]
+        run as user = netdata
+        web files owner = root
+        web files group = root
+        # Netdata is not designed to be exposed to potentially hostile
+        # networks. See https://github.com/netdata/netdata/issues/164
+        bind socket to IP = 0.0.0.0
+
+Правим Vagrantfile, делаем vagrant reload, идём пить чай.
+Потом лезем в браузер, в строке пишем http://localhost:19999 и наблюдаем красивыес трелочки и графики.
+
+Для примера запускаем vagrant@vagrant:~$ dd if=/dev/urandom of=/dev/null
+и развлекаемся, наблюдая.
+
+Ну и снапшот сохранил. Просто так. Приложу к заданию.
+
+4. Не знаю, может ли софтина что-либо осознавать, даже если это ИИ, но инфа в выводе о том, что загружена ОС в виртуалке есть.
+Например:
+[    0.000000] Hypervisor detected: KVM
+
+и ещё
+vagrant@vagrant:~$ dmesg | grep virtual
+[    0.007613] CPU MTRRs all blank - virtualized system.
+[    0.219373] Booting paravirtualized kernel on KVM
+[    5.814999] systemd[1]: Detected virtualization oracle.
+
+Интереса ради и чтобы сравнить пустим то же на железе:
+[cats@host-63 ~]$ dmesg | grep virtual
+[    0.000000] Booting paravirtualized kernel on bare hardware
+
+5.
+vagrant@vagrant:~$ sysctl fs.nr_open
+fs.nr_open = 1048576
+Это системное ограничение количества файлов, которые могут быть выделены одним процессом.
+Есть файл /proc/sys/fs/nr_open, там это и написано.
+
+Вот что ещё удалось найти об этом:
+1. Количество файловых дескрипторов, открытых всеми процессами, не может превышать /proc/sys/fs/file-max
+2. Количество файловых дескрипторов, открытых одним процессом, не может превышать мягкое ограничение nofile (-Sn) в пользовательском ограничении
+3. Мягкий предел nofile (-Sn) не может превышать его жесткий предел
+4. Жесткий предел nofile (-Hn) не может превышать /proc/sys/fs/nr_open
+
+Вот:
+vagrant@vagrant:~$ cat /proc/sys/fs/nr_open
+1048576
+vagrant@vagrant:~$ ulimit -Sn (soft, мягкий лимит)
+1024
+vagrant@vagrant:~$ ulimit -Hn (hard, жесткий лимит)
+1048576
+vagrant@vagrant:~$ cat /proc/sys/fs/file-max
+9223372036854775807
+
+То значит, что параметры ulimit -Sn и ulimit -Hn могут не дать достичь числа, заданного в fs.nr_open
+
+6.
+Пустим процесс:
+vagrant@vagrant:~$ sudo -i
+root@vagrant:~# ushare -f --pid --mount-proc sleep 1h
+
+Из другого терминала поглядим на него:
+root@vagrant:~# ps aux | grep sleep
+root        3987  0.0  0.0   8080   596 pts/0    S+   20:00   0:00 unshare -f --pid --mount-proc sleep 1h
+root        3988  0.0  0.0   8076   532 pts/0    S+   20:00   0:00 sleep 1h
+root        4053  0.0  0.0   8900   736 pts/1    S+   20:02   0:00 grep --color=auto sleep
+
+Вот он - PID 3988. Лезем в namespace и смотрим.
+root@vagrant:~# nsenter --target 3988 --pid --mount
+root@vagrant:/# ps aux
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root           1  0.0  0.0   8076   532 pts/0    S+   20:00   0:00 sleep 1h
+root           2  0.4  0.1   9836  3944 pts/1    S    20:03   0:00 -bash
+root          11  0.0  0.1  11492  3320 pts/1    R+   20:03   0:00 ps aux
+
+7.
+А вот это забавная команда: :(){ :|:& };:
+чтобы было понятнее, заменим : на function
+И получим:
+function()
+    { function | function &
+}
+function
+То есть, создаётся функция, которая запускает 2 экземпляра себя, которые делают так же и т.д.
+Чую, pidы закончатся очень быстро.
+
+Сейчас в виртуалке запустим и мониторить будем с хоста.
+Ну да. ЦПУ на полном газу, Used RAM растёт. Наблюдаем пока.
+Всё. -bash: fork: retry: Resource temporarily unavailable
+
+Ну и dmesg сказал, что
+[  255.068600] cgroup: fork rejected by pids controller in /user.slice/user-1000.slice/session-4.scope
+В ulimit --help сказано было, что
+      -u        the maximum number of user processes
+Похоже, это и есть ограничитель.
+
+Посмотрим лимиты:
+vagrant@vagrant:~$ ulimit -a
+core file size          (blocks, -c) 0
+data seg size           (kbytes, -d) unlimited
+scheduling priority             (-e) 0
+file size               (blocks, -f) unlimited
+pending signals                 (-i) 7597
+max locked memory       (kbytes, -l) 65536
+max memory size         (kbytes, -m) unlimited
+open files                      (-n) 1024
+pipe size            (512 bytes, -p) 8
+POSIX message queues     (bytes, -q) 819200
+real-time priority              (-r) 0
+stack size              (kbytes, -s) 8192
+cpu time               (seconds, -t) unlimited
+max user processes              (-u) 7597
+virtual memory          (kbytes, -v) unlimited
+file locks                      (-x) unlimited
+
+Ставим ulimit -u 20
+И такого безобразия не произойдёт. И ничего полезного особо тоже тогда не произойдёт.
+В этой сессии работает. В другой значения будут прежними.
+
