@@ -1,0 +1,238 @@
+1.
+[cats@host-63 ~]$ telnet stackoverflow.com 80
+Trying 151.101.129.69...
+Connected to stackoverflow.com.
+Escape character is '^]'.
+GET /questions HTTP/1.0
+HOST: stackoverflow.com
+
+HTTP/1.1 301 Moved Permanently
+cache-control: no-cache, no-store, must-revalidate
+location: https://stackoverflow.com/questions
+x-request-guid: 11333bc6-946f-4cae-a440-bc4180d8b1a2
+feature-policy: microphone 'none'; speaker 'none'
+content-security-policy: upgrade-insecure-requests; frame-ancestors 'self' https://stackexchange.com
+Accept-Ranges: bytes
+Date: Mon, 29 Nov 2021 18:22:07 GMT
+Via: 1.1 varnish
+Connection: close
+X-Served-By: cache-fra19141-FRA
+X-Cache: MISS
+X-Cache-Hits: 0
+X-Timer: S1638210127.388601,VS0,VE92
+Vary: Fastly-SSL
+X-DNS-Prefetch-Control: off
+Set-Cookie: prov=fd1dd2e1-6811-d0d8-7846-643f455f9ce3; domain=.stackoverflow.com; expires=Fri, 01-Jan-2055 00:00:00 GMT; path=/; HttpOnly
+
+Connection closed by foreign host.
+[cats@host-63 ~]$
+
+Вот здесь сказано, что HTTP/1.1 301 Moved Permanently
+То есть, как найдено, это означает, что "Перемещён на постоянной основе". Этот код ответа значит, что URI запрашиваемого ресурса был изменён.
+Вот, сказано, что location: https://stackoverflow.com/questions
+
+2. Делаем тоже самое в Firefox. Там почему-то сразу идёт переадресация на location: https://stackoverflow.com/questions и HTTP код уже 200. А 301 для http://stackoverflow.com не показывается.
+Пробуем в Chromium. Там подробнее:
+Статус 301 ("Временное перенаправление"), время 249ms
+Потом открытие https://stackoverflow.com/ - 492ms - самое долгое.
+
+Выбираем первый ответ, лезем в headers, а там видим код 301 Moved Permanently
+Request URL: http://stackoverflow.com/
+Request Method: GET
+Status Code: 301 Moved Permanently
+Remote Address: 151.101.65.69:80
+Referrer Policy: strict-origin-when-cross-origin
+
+Скриншот прилагаю.
+
+3.
+Вот мой IP
+[cats@host-63 ~]$ wget -qO- eth0.me
+95.215.251.231
+Или в браузере пишем "мой IP". Полно сервисов, которые IP скажут.
+
+4.
+[cats@host-63 ~]$ whois 95.215.251.231
+% This is the RIPE Database query service.
+% The objects are in RPSL format.
+%
+% The RIPE Database is subject to Terms and Conditions.
+% See http://www.ripe.net/db/support/db-terms-conditions.pdf
+
+% Note: this output has been filtered.
+%       To receive output for a database update, use the "-B" flag.
+
+% Information related to '95.215.248.0 - 95.215.251.255'
+
+% Abuse contact for '95.215.248.0 - 95.215.251.255' is 'abuse@mtu.ru'
+
+inetnum:        95.215.248.0 - 95.215.251.255
+netname:        ZAO-PENZA-GSM-net
+country:        ru
+org:            ORG-ZM1-RIPE
+admin-c:        MTU1-RIPE
+tech-c:         MTU1-RIPE
+status:         ASSIGNED PI
+mnt-by:         RIPE-NCC-END-MNT
+mnt-by:         MTU-NOC
+mnt-routes:     MTU-NOC
+mnt-domains:    MTU-NOC
+created:        2012-07-20T09:26:01Z
+last-modified:  2019-03-21T12:52:32Z
+source:         RIPE # Filtered
+
+organisation:   ORG-ZM1-RIPE
+org-name:       MTS PJSC
+country:        RU
+org-type:       LIR
+address:        Petrovsky blvd 12, bldg 3
+address:        127051
+address:        Moscow
+address:        RUSSIAN FEDERATION
+phone:          +74957213499
+fax-no:         +74992318129
+admin-c:        LAP-RIPE
+admin-c:        SAAP-RIPE
+admin-c:        TABY-RIPE
+admin-c:        LMUR-RIPE
+admin-c:        YUF-RIPE
+admin-c:        RPS-RIPE
+abuse-c:        MAB8359-RIPE
+mnt-ref:        RIPE-NCC-HM-MNT
+mnt-ref:        MTU-NOC
+mnt-by:         RIPE-NCC-HM-MNT
+mnt-by:         MTU-NOC
+created:        2004-04-17T11:55:44Z
+last-modified:  2021-10-28T18:07:36Z
+source:         RIPE # Filtered
+
+role:           MTS backbone NOC
+address:        PJSC MTS / former CJSC Comstar-Direct
+address:        Petrovsky blvd 12, bldg 3
+address:        P.O. BOX 4711 127051
+address:        Moscow, Russia
+remarks:        **************************************
+remarks:        Contact addresses:
+remarks:        routing & peering noc@mtu.ru
+remarks:        spam & security abuse@mtu.ru
+remarks:        mail postmaster@mtu.ru
+remarks:        ddos reports ddos-reports@mtu.ru
+remarks:        **************************************
+phone:          +7 495 721-34-99
+fax-no:         +7 495 956-07-07
+admin-c:        EDA-RIPE
+admin-c:        RPS-RIPE
+tech-c:         EDA-RIPE
+tech-c:         SAAP-RIPE
+nic-hdl:        MTU1-RIPE
+mnt-by:         MTU-NOC
+created:        2002-10-18T13:29:19Z
+last-modified:  2019-09-09T10:11:20Z
+source:         RIPE # Filtered
+
+% Information related to '95.215.248.0/22AS199054'
+
+route:          95.215.248.0/22
+descr:          ZAO Penza-GSM (subsidiary of MTS PJSC)
+origin:         AS199054
+mnt-by:         MTU-NOC
+created:        2015-09-01T13:53:11Z
+last-modified:  2015-09-01T13:53:11Z
+source:         RIPE
+
+% Information related to '95.215.248.0/22AS35728'
+
+route:          95.215.248.0/22
+descr:          ZAO Penza-GSM (subsidiary of MTS PJSC)
+origin:         AS35728
+mnt-by:         MTU-NOC
+created:        2015-09-02T12:46:24Z
+last-modified:  2015-09-02T12:46:24Z
+source:         RIPE
+
+% This query was served by the RIPE Database Query Service version 1.101 (HEREFORD)
+
+
+[cats@host-63 ~]$
+
+Тут написано, что провайдер называется  ZAO-PENZA-GSM-net
+Об автономной системе в строке origin сказано.
+Это
+origin:         AS35728
+
+5.
+Запустим traceroute с -А (показать автономные системы, AS) и -n (не получать имена хостов)
+[cats@host-63 ~]$ traceroute -An 8.8.8.8
+traceroute to 8.8.8.8 (8.8.8.8), 30 hops max, 60 byte packets
+ 1  192.168.20.1 [*]  0.550 ms  0.583 ms  0.643 ms
+ 2  100.87.0.1 [*]  2.524 ms  2.351 ms  2.533 ms
+ 3  85.234.32.129 [AS35728]  2.276 ms  2.190 ms  2.411 ms
+ 4  212.188.23.180 [AS8359]  3.132 ms  3.125 ms  3.117 ms
+ 5  195.34.53.241 [AS8359]  15.219 ms  15.492 ms  15.187 ms
+ 6  212.188.28.245 [AS8359]  16.391 ms  14.339 ms  14.439 ms
+ 7  212.188.28.201 [AS8359]  7.971 ms  8.002 ms  8.094 ms
+ 8  212.188.42.69 [AS8359]  13.615 ms  13.558 ms  13.593 ms
+ 9  * * *
+10  195.34.50.74 [AS8359]  14.783 ms  14.773 ms  14.881 ms
+11  212.188.29.82 [AS8359]  14.863 ms  14.960 ms  15.021 ms
+12  108.170.250.66 [AS15169]  15.164 ms 108.170.250.83 [AS15169]  67.724 ms 108.170.250.130 [AS15169]  15.104 ms
+13  * * *
+14  * 209.85.254.20 [AS15169]  32.237 ms *
+15  72.14.237.201 [AS15169]  33.344 ms 172.253.51.247 [AS15169]  33.590 ms 142.250.56.13 [AS15169]  30.205 ms
+16  * * *
+17  * * *
+18  * * *
+19  * * *
+20  * * *
+21  * * *
+22  * * *
+23  * * *
+24  * * *
+25  * 8.8.8.8 [AS15169]  31.624 ms *
+
+Вот, всё как в лекции. Мы видим, что пакет идёт сначала на мой роутер 192.168.20.1, потом по списку IP-адресов.
+Видим 3 различных автономные системы:
+AS35728 - это мой провайдер
+AS8359 - провайдер МТС
+AS15169 - это google
+
+6. Пустим 20 пакетов (-с 20) и выведем результат (-r)
+[root@host-63 ~]# mtr -r -c 20 8.8.8.8
+HOST: host-63                     Loss%   Snt   Last   Avg  Best  Wrst StDev
+  1.|-- _gateway                   0.0%    20    0.4   0.4   0.3   0.5   0.0
+  2.|-- 100.87.0.1                 0.0%    20    1.7   1.8   1.4   3.8   0.5
+  3.|-- corp-32-129.ptcomm.ru      0.0%    20    1.3   1.3   1.2   1.6   0.1
+  4.|-- ler-cr02-be12.10.pen.mts-  0.0%    20    2.0   2.1   1.8   2.8   0.2
+  5.|-- ler-cr01-ae5.58.pen.mts-i  0.0%    20   15.4  15.0  14.3  20.4   1.3
+  6.|-- pstamb-cr01-ae3.58.tam.mt  0.0%    20   14.3  14.9  14.3  16.4   0.6
+  7.|-- psnmich-cr01-ae5.68.rzn.m  0.0%    20    7.9   8.5   7.8  13.8   1.4
+  8.|-- a197-cr04-be4.62.msk.mts-  0.0%    20   13.6  13.4  13.2  13.7   0.1
+  9.|-- a197-cr01-ae31.77.msk.mts  0.0%    20   21.0  17.3  14.5  30.1   3.6
+ 10.|-- mag9-cr02-be10.77.msk.mts  0.0%    20   15.1  14.8  14.5  15.1   0.2
+ 11.|-- mag9-cr01-be16.77.msk.mts  0.0%    20   14.8  14.6  14.4  14.9   0.2
+ 12.|-- 108.170.250.113           85.0%    20   15.3  15.2  15.0  15.5   0.2
+ 13.|-- 142.251.49.158            90.0%    20   30.3  30.4  30.3  30.4   0.1
+ 14.|-- 216.239.43.20             40.0%    20   28.5  31.0  28.2  57.7   8.4
+ 15.|-- 216.239.47.165             0.0%    20   31.4  31.8  31.3  34.2   0.7
+ 16.|-- ???                       100.0    20    0.0   0.0   0.0   0.0   0.0
+
+Вот, самая большая задержка на 142.251.49.158, 216.239.43.20 и 216.239.47.165, если смотреть по среднему (avg), а на первом месте по наибольшему времени (Wrst) - 216.239.43.20
+whois говорит, что это уже где-то у Google.
+
+7.
+Пишем так, чтобы увидеть только А-записи:
+[root@host-63 ~]# dig dns.google A +noall +answer
+dns.google.             427     IN      A       8.8.8.8
+dns.google.             427     IN      A       8.8.4.4
+
+Вот. dns.google на 8.8.8.8 и 8.8.4.4
+
+8.
+А с -x получим обратную запись:
+[cats@host-63 ~]$ dig -x 8.8.8.8 +noall +answer
+8.8.8.8.in-addr.arpa.   6779    IN      PTR     dns.google.
+
+[cats@host-63 ~]$ dig -x 8.8.4.4 +noall +answer
+4.4.8.8.in-addr.arpa.   7775    IN      PTR     dns.google.
+
+Значит, к 8.8.8.8 и 8.8.4.4 привязан dns.google
