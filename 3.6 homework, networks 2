@@ -1,0 +1,302 @@
+1. Проверьте список доступных сетевых интерфейсов на вашем компьютере. Какие команды есть для этого в Linux и в Windows?
+Linux:
+ifconfig. Например
+[cats@host-63 ~]$ ifconfig
+eth0      Link encap:Ethernet  HWaddr 00:1E:8C:BB:6D:DF
+          UP BROADCAST MULTICAST  MTU:1500  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:0 (0.0 b)  TX bytes:0 (0.0 b)
+          Interrupt:17
+
+eth1      Link encap:Ethernet  HWaddr 00:1E:8C:BB:62:8B
+          inet addr:192.168.20.188  Bcast:192.168.20.255  Mask:255.255.255.0
+          inet6 addr: fe80::21e:8cff:febb:628b/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:5074 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:3270 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:4789427 (4.5 MiB)  TX bytes:315112 (307.7 KiB)
+
+lo        Link encap:Local Loopback
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          inet6 addr: ::1/128 Scope:Host
+          UP LOOPBACK RUNNING  MTU:65536  Metric:1
+          RX packets:82 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:82 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:20490 (20.0 KiB)  TX bytes:20490 (20.0 KiB)
+
+virbr0    Link encap:Ethernet  HWaddr 52:54:00:2B:2E:34
+          inet addr:192.168.122.1  Bcast:192.168.122.255  Mask:255.255.255.0
+          UP BROADCAST MULTICAST  MTU:1500  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:0 (0.0 b)  TX bytes:0 (0.0 b)
+
+Есть утилита ip, она более новая.
+[cats@host-63 ~]$ ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+2: eth0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc fq_codel state DOWN group default qlen 1000
+    link/ether 00:1e:8c:bb:6d:df brd ff:ff:ff:ff:ff:ff
+3: eth1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 00:1e:8c:bb:62:8b brd ff:ff:ff:ff:ff:ff
+    inet 192.168.20.188/24 brd 192.168.20.255 scope global dynamic noprefixroute eth1
+       valid_lft 84735sec preferred_lft 73935sec
+    inet6 fe80::21e:8cff:febb:628b/64 scope link
+       valid_lft forever preferred_lft forever
+4: wlan0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:15:af:64:b3:af brd ff:ff:ff:ff:ff:ff
+5: virbr0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default qlen 1000
+    link/ether 52:54:00:2b:2e:34 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.122.1/24 brd 192.168.122.255 scope global virbr0
+       valid_lft forever preferred_lft forever
+
+Или так этой же утилитой:
+vagrant@vagrant:~$ ip -c -br link
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
+eth0             UP             08:00:27:73:60:cf <BROADCAST,MULTICAST,UP,LOWER_UP>
+
+В Винде можно так в cmd или PowerShell
+PS C:\Users\SarajkinA> ipconfig /all
+
+Настройка протокола IP для Windows
+
+   Имя компьютера  . . . . . . . . . : WIN-2TLEGPEHAVC
+   Основной DNS-суффикс  . . . . . . :
+   Тип узла. . . . . . . . . . . . . : Гибридный
+   IP-маршрутизация включена . . . . : Нет
+   WINS-прокси включен . . . . . . . : Нет
+
+Ethernet adapter Ethernet:
+
+   DNS-суффикс подключения . . . . . :
+   Описание. . . . . . . . . . . . . : Red Hat VirtIO Ethernet Adapter
+   Физический адрес. . . . . . . . . : 52-54-00-F1-89-61
+   DHCP включен. . . . . . . . . . . : Нет
+   Автонастройка включена. . . . . . : Да
+   Локальный IPv6-адрес канала . . . : fe80::b95e:9e28:8aca:9294%12(Основной)
+   IPv4-адрес. . . . . . . . . . . . : 192.168.1.3(Основной)
+   Маска подсети . . . . . . . . . . : 255.255.255.0
+   Основной шлюз. . . . . . . . . : 192.168.1.1
+   IAID DHCPv6 . . . . . . . . . . . : 307385344
+   DUID клиента DHCPv6 . . . . . . . : 00-01-00-01-27-3B-4F-41-52-54-00-F1-89-61
+   DNS-серверы. . . . . . . . . . . : 192.168.1.1
+                                       8.8.8.8
+   NetBios через TCP/IP. . . . . . . . : Включен
+
+Туннельный адаптер isatap.{691AD3DB-1BDD-4A8B-AF9C-9D13BD9C38C0}:
+
+   Состояние среды. . . . . . . . : Среда передачи недоступна.
+   DNS-суффикс подключения . . . . . :
+   Описание. . . . . . . . . . . . . : Адаптер Microsoft ISATAP #2
+   Физический адрес. . . . . . . . . : 00-00-00-00-00-00-00-E0
+   DHCP включен. . . . . . . . . . . : Нет
+   Автонастройка включена. . . . . . : Да
+
+или так можно посмотреть:
+PS C:\Users\SarajkinA> netsh interface show interface
+
+Состояние адм.  Состояние     Тип              Имя интерфейса
+---------------------------------------------------------------------
+Разрешен       Подключен      Выделенный       Ethernet
+
+2. Какой протокол используется для распознавания соседа по сетевому интерфейсу? Какой пакет и команды есть в Linux для этого?
+Это в лекции было. Протокол lldp.
+Link Layer Discovery Protocol (LLDP) — протокол канального уровня, позволяющий сетевому оборудованию оповещать оборудование, работающее в локальной сети, о своём существовании и передавать ему свои характеристики, а также получать от него аналогичные сведения.
+Поставим пакет так:
+vagrant@vagrant:~$ sudo apt install lldpd
+и включим это дело так:
+vagrant@vagrant:~$ sudo systemctl enable --now lldpd
+
+3. Какая технология используется для разделения L2 коммутатора на несколько виртуальных сетей? Какой пакет и команды есть в Linux для этого? Приведите пример конфига.
+Это VLAN - Virtual Local Area Network (виртаульная локальная сеть).
+Нужен модуль ядра 8021.
+Проверить его можно так:
+vagrant@vagrant:~$ sudo lsmod | grep 8021q
+8021q                  32768  0
+garp                   16384  1 8021q
+mrp                    20480  1 8021q
+
+На лекции говорили, что есть утилита vlan. Пакет vlan.
+Ещё есть ifupdown.
+Можно править конфигу в /etc/network/interfaces, например, написать там:
+auto eth0.100
+iface eth0.100 inet static
+address 192.168.1.200
+netmask 255.255.255.0
+vlan-raw-device eth0
+Здесь сказано, что интерфейс eth0.100 надо поднимать при старте сети, iface eth0.100 - задано название интерфейса, написан IP, и vlan-raw-device eth0 указывает на привязку к физическому интерфейсу eth0
+Это для debian, ubuntu
+
+Ещё можно через ip так:
+vagrant@vagrant:~$ sudo ip link add link eth0 name eth0.10 type vlan id 10
+vagrant@vagrant:~$ ip -c -br link
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
+eth0             UP             08:00:27:73:60:cf <BROADCAST,MULTICAST,UP,LOWER_UP>
+eth0.10@eth0     DOWN           08:00:27:73:60:cf <BROADCAST,MULTICAST>
+vagrant@vagrant:~$ sudo ip addr add 192.168.20.118/24 brd 192.168.20.255 dev eth0.10
+vagrant@vagrant:~$ sudo ip link set dev eth0.10 up
+vagrant@vagrant:~$ ip -c -br link
+lo               UNKNOWN        00:00:00:00:00:00 <LOOPBACK,UP,LOWER_UP>
+eth0             UP             08:00:27:73:60:cf <BROADCAST,MULTICAST,UP,LOWER_UP>
+eth0.10@eth0     UP             08:00:27:73:60:cf <BROADCAST,MULTICAST,UP,LOWER_UP>
+vagrant@vagrant:~$
+Но живёт это всё до перезагрузки.
+
+Есть такая утилита, называется netplan. Если использовать netplan, то надо сделать конфигурационный файл в /etc/netplan
+и в нём написать например, так
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eth0:
+      dhcp4: no
+  vlans:
+    vlan10:
+      id: 10
+      link: eth0
+      dhcp4: no
+      addresses:
+        - 192.168.20.113/24
+      gateway4: 192.168.20.1
+      nameservers:
+        addresses: [8.8.8.8]
+
+И сделать netplan try для проверки этой заразы. Капризная штука.
+Потом netplan generate и netplan apply
+
+4. Какие типы агрегации интерфейсов есть в Linux? Какие опции есть для балансировки нагрузки? Приведите пример конфига.
+На лекции говорили, что агрегация портов - это объединение нескольких физических интерфейсов в один.
+Протокол управления агрегацией LACP.
+Режимы работы:
+mode=0 (balance-rr)- пакеты идут по очереди по всем объединенным физическим интерфейсам;
+mode=1 (active-backup) - пакеты идут по одному, а по второму в случае отказа первого;
+mode=2 (balance-xor) - пакеты отправляются в зависимости от mac источника и получателя;
+mode=3 (broadcast) - все пакеты через все интерфейсы;
+mode=4 (802.3ad) - работает по стандарту IEEE, больше пропускная способность и надёжность
+mode=5 (balance-tlb) - исходящий трафик идёт через менее загруженный интерфейс.
+mode=6 (balance-alb) - то же, что и mode=5, но распределяет и входящий трафик тоже.
+
+Пример конфы для netplan:
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eth0: {}
+    eth1: {}
+  bonds:
+    bond0:
+      dhcp4: yes
+      interfaces:
+      - eth0
+      - eth1
+      parameters:
+        mode: active-backup
+        mii-monitor-interval: 1
+
+Ну или в /etc/network/interfaces
+Дописываем это:
+# The bond0 network interface
+auto bond0
+iface bond0 inet dhcp
+   bond-slaves eth0
+   bond-mode active-backup
+   bond-miimon 100
+   bond-primary eth0
+И перезапускаем сеть.
+
+5. Сколько IP адресов в сети с маской /29 ? Сколько /29 подсетей можно получить из сети с маской /24. Приведите несколько примеров /29 подсетей внутри сети 10.10.10.0/24.
+
+Маска сети показывает, сколько бит отдано на идентификатор сети, а сколько на идентификатор хоста.
+Если маска /29, то 32 - 29 = 3 бита - размер идентификтора хоста. а хостов там может быть 6.
+В сети с масокй /29 (255.255.255.248) может быть 8 адресов, в т.ч. 6 узловых адресов, перый адрес - адрес самой сети, последний - широковещательный.
+
+Вот, есть у нас сеть 10.10.10.0/24
+Чтобы разделить сеть на подсети, можем брать биты из идентификатора хоста, таким образом увеличивая число подсетей, но уменьшая тем самым число хостов.
+Если всего в сети /24 256 адресов, а в /29 - 8, то 256/8 = 32. То есть Сеть 10.10.10.0/24 можно разделить на 32 подсети. Адреса будут 0-7, 8-15, 16-23 и т.д.
+А в подсетях адреса хостов могут быть 1-6, 9-14, 17-22 и т.д.
+Например,
+10.10.10.1 - адрес хоста в первой подсети
+10.10.10.18 - адрес хоста в третьей сети
+
+6. Задача: вас попросили организовать стык между 2-мя организациями.
+Диапазоны 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 уже заняты.
+Из какой подсети допустимо взять частные IP адреса?
+Маску выберите из расчета максимум 40-50 хостов внутри подсети.
+
+Если надо 40-50 хостов внутри подсети, то годится маска /26. Там 64 адреса, в.т. 62 хоста
+/27 не подходит, ибо там всего 30 хостов, что маловато.
+
+Можно использовать диапазон 100.64.0.0/10, раз все остальные заняты.
+Там подсетей /26 можно 65536 штук сделать.
+
+Ну и...
+[root@host-63 netplan]# ipcalc -b --split 50 100.64.0.0/10
+Address:   100.64.0.0
+Netmask:   255.192.0.0 = 10
+Wildcard:  0.63.255.255
+=>
+Network:   100.64.0.0/10
+HostMin:   100.64.0.1
+HostMax:   100.127.255.254
+Broadcast: 100.127.255.255
+Hosts/Net: 4194302               Class A
+
+1. Requested size: 50 hosts
+Netmask:   255.255.255.192 = 26
+Network:   100.64.0.0/26
+HostMin:   100.64.0.1
+HostMax:   100.64.0.62
+Broadcast: 100.64.0.63
+Hosts/Net: 62                    Class A
+
+Needed size:  64 addresses.
+Used network: 100.64.0.0/26
+Unused:
+100.64.0.64/26
+100.64.0.128/25
+100.64.1.0/24
+100.64.2.0/23
+100.64.4.0/22
+100.64.8.0/21
+100.64.16.0/20
+100.64.32.0/19
+100.64.64.0/18
+100.64.128.0/17
+100.65.0.0/16
+100.66.0.0/15
+100.68.0.0/14
+100.72.0.0/13
+100.80.0.0/12
+100.96.0.0/11
+
+7. Как проверить ARP таблицу в Linux, Windows? Как очистить ARP кеш полностью? Как из ARP таблицы удалить только один нужный IP?
+Команда arp -a покажет таблицу и в Linux и в Windows.
+[root@host-63 netplan]# arp -a
+_gateway (192.168.20.1) at 2c:56:dc:89:00:94 [ether] on eth1
+? (192.168.20.39) at 40:b0:76:8d:9f:d1 [ether] on eth1
+? (192.168.20.174) at 00:26:2d:30:b5:5f [ether] on eth1
+Вот, видим роутер, видим себя и вторую машинку в сети.
+
+Удалим одну конкретную запись и посмотрим ещё раз:
+[root@host-63 ~]# arp -d 192.168.20.174
+[root@host-63 ~]# arp -v
+Address                  HWtype  HWaddress           Flags Mask            Iface
+192.168.20.39            ether   40:b0:76:8d:9f:d1   C                     eth1
+_gateway                 ether   2c:56:dc:89:00:94   C                     eth1
+Entries: 2      Skipped: 0      Found: 2
+
+Команда [root@host-63 ~]# ip neigh flush all
+очистит кэш.
+
+
+
+
