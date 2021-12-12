@@ -1,0 +1,297 @@
+1. Установите Bitwarden плагин для браузера. Зарегестрируйтесь и сохраните несколько паролей.
+
+Установил в firefox. Создал акк, указав почту и мастер-пароль. Вошёл. Скрин прилагаю. Не знал о такой полезной штуке, теперь буду пользоваться.
+
+2. Установите Google authenticator на мобильный телефон. Настройте вход в Bitwarden акаунт через Google authenticator OTP.
+
+Теперь лезу в настройки акка на google, лезу в безопасность, потом "двухэтапная аутентификация", включаю её, потом выбираю autentificator, жму, что у меня android.
+Показываю под приложению google autentificator, оно даёт мне 6-значный ключ. Ввожу его в браузере. Готово. Теперь используется autentificator для входа.
+Теперь иду в акк на bitwarden со своей почтой и мастер-паролем. Лезу в настройки - двухфакторная аутентификация. Выбираю, что хочу через приложение-аутентификатор.
+Лезет qr-код, который надо показать софтине-аутентификатору. Оно мне опять 6-значный код. Ввожу его, пока он не протух. А тухнут они быстро. Всё, включено.
+Выхожу, захожу снова. Без кода 6-значного не пускает.
+Квест пройден.
+
+3. Установите apache2, сгенерируйте самоподписанный сертификат, настройте тестовый сайт для работы по HTTPS.
+ставлю апач:
+apt-get update && apt-get install apache2
+Включим, в автозагрузку его и проверим, работает ли:
+root@vagrant:~# systemctl enable --now apache2
+Synchronizing state of apache2.service with SysV service script with /lib/systemd/systemd-sysv-install.
+Executing: /lib/systemd/systemd-sysv-install enable apache2
+root@vagrant:~# systemctl status apache2
+● apache2.service - The Apache HTTP Server
+     Loaded: loaded (/lib/systemd/system/apache2.service; enabled; vendor preset: enabled)
+     Active: active (running) since Sat 2021-12-11 19:03:04 UTC; 1min 7s ago
+       Docs: https://httpd.apache.org/docs/2.4/
+   Main PID: 13524 (apache2)
+      Tasks: 55 (limit: 1071)
+     Memory: 5.6M
+     CGroup: /system.slice/apache2.service
+             ├─13524 /usr/sbin/apache2 -k start
+             ├─13525 /usr/sbin/apache2 -k start
+             └─13526 /usr/sbin/apache2 -k start
+
+Dec 11 19:03:04 vagrant systemd[1]: Starting The Apache HTTP Server...
+Dec 11 19:03:04 vagrant systemd[1]: Started The Apache HTTP Server.
+
+Сертификаты буду складывать вот сюда (создаю):
+root@vagrant:/etc/apache2# mkdir ssl
+
+Иду в эту директорию и генерю:
+root@vagrant:/etc/apache2/ssl# openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/apache2/ssl/apache-selfsigned.key -out /etc/apache2/ssl/apache-selfsigned.crt
+Generating a RSA private key
+.....................................+++++
+......................................+++++
+writing new private key to '/etc/apache2/ssl/apache-selfsigned.key'
+-----
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:RU
+State or Province Name (full name) [Some-State]:PNZ
+Locality Name (eg, city) []:PNZ
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:CatsLTD
+Organizational Unit Name (eg, section) []:CatsDept
+Common Name (e.g. server FQDN or YOUR name) []:ksenik.site
+Email Address []:webmaster@localhost
+
+Включаю модуль ssl:
+root@vagrant:/etc/apache2/ssl# a2enmod ssl
+Considering dependency setenvif for ssl:
+Module setenvif already enabled
+Considering dependency mime for ssl:
+Module mime already enabled
+Considering dependency socache_shmcb for ssl:
+Enabling module socache_shmcb.
+Enabling module ssl.
+See /usr/share/doc/apache2/README.Debian.gz on how to configure SSL and create self-signed certificates.
+To activate the new configuration, you need to run:
+  systemctl restart apache2
+Ну и restart его, раз так написано.
+
+Теперь надо утащить у дочери какой-нибудь сайт:
+root@vagrant:/srv/ksenik.site# scp -2 -r cats@192.168.20.188:/home/cats/Документы/ksenik.site/ /srv
+bio.html                                                                                                                                                                                                   100% 5657     4.5MB/s   00:00
+index.html                                                                                                                                                                                                 100% 2595     3.2MB/s   00:00
+let.html                                                                                                                                                                                                   100% 6222     4.9MB/s   00:00
+main.css                                                                                                                                                                                                   100%  831     1.0MB/s   00:00
+portret.jpg                                                                                                                                                                                                100% 5220     5.4MB/s   00:00
+Thumbs.db                                                                                                                                                                                                  100%   11KB   9.6MB/s   00:00
+root@vagrant:/srv/ksenik.site#
+
+Лезем в /etc/apache2/sites-available/ksenik.site.conf, пишем там
+VirtualHost *:443>
+ServerName ksenik.site
+ServerAlias www.ksenik.site
+ServerAdmin webmaster@localhost
+SSLEngine on
+SSLCertificateFile /etc/apache2/ssl/apache-selfsigned.crt
+SSLCertificateKeyFile /etc/apache2/ssl/apache-selfsigned.key
+DocumentRoot /srv/ksenik.site
+ErrorLog ${APACHE_LOG_DIR}/error.log
+CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+
+Активируем виртуальный хост и перезапустим апач:
+root@vagrant:/etc/apache2/sites-available# a2ensite ksenik.site.conf
+Enabling site ksenik.site.
+To activate the new configuration, you need to run:
+  systemctl reload apache2
+root@vagrant:/etc/apache2/sites-available# systemctl reload apache2
+
+В vagrant мост уже был добавлен ранее. Лезем браузером с хоста и читаем про Достоевского. Однако ж и он проигрывать деньги в карты любил... О, времена...
+Скрин прилагаю.
+
+4.Проверьте на TLS уязвимости произвольный сайт в интернете.
+
+Пусть будет http://oootep.ru/ Это сайт какой-то конторы, которая строит линии связи и электропередачи.
+Проверяем:
+oot@vagrant:~/testssl.sh# ./testssl.sh -U --sneaky oootep.ru/
+
+###########################################################
+    testssl.sh       3.1dev from https://testssl.sh/dev/
+    (6da72bc 2021-12-10 20:16:28 -- )
+
+      This program is free software. Distribution and
+             modification under GPLv2 permitted.
+      USAGE w/o ANY WARRANTY. USE IT AT YOUR OWN RISK!
+
+       Please file bugs @ https://testssl.sh/bugs/
+
+###########################################################
+
+ Using "OpenSSL 1.0.2-chacha (1.0.2k-dev)" [~183 ciphers]
+ on vagrant:./bin/openssl.Linux.x86_64
+ (built: "Jan 18 17:12:17 2019", platform: "linux-x86_64")
+
+
+ Start 2021-12-12 07:23:58        -->> 77.222.61.224:443 (oootep.ru) <<--
+
+ rDNS (77.222.61.224):   vh1.sweb.ru.
+ Service detected:       HTTP
+
+
+ Testing vulnerabilities
+
+ Heartbleed (CVE-2014-0160)                not vulnerable (OK), timed out
+ CCS (CVE-2014-0224)                       not vulnerable (OK)
+ Ticketbleed (CVE-2016-9244), experiment.  not vulnerable (OK)
+ ROBOT                                     not vulnerable (OK)
+ Secure Renegotiation (RFC 5746)           supported (OK)
+ Secure Client-Initiated Renegotiation     not vulnerable (OK)
+ CRIME, TLS (CVE-2012-4929)                not vulnerable (OK)
+ BREACH (CVE-2013-3587)                    no gzip/deflate/compress/br HTTP compression (OK)  - only supplied "/" tested
+ POODLE, SSL (CVE-2014-3566)               not vulnerable (OK)
+ TLS_FALLBACK_SCSV (RFC 7507)              Downgrade attack prevention supported (OK)
+ SWEET32 (CVE-2016-2183, CVE-2016-6329)    not vulnerable (OK)
+ FREAK (CVE-2015-0204)                     not vulnerable (OK)
+ DROWN (CVE-2016-0800, CVE-2016-0703)      not vulnerable on this host and port (OK)
+                                           make sure you don't use this certificate elsewhere with SSLv2 enabled services
+                                           https://censys.io/ipv4?q=4019053C05478601276619A78F783152912BAAE961A32E144FD5AB416F1A331B could help you to find out
+ LOGJAM (CVE-2015-4000), experimental      not vulnerable (OK): no DH EXPORT ciphers, no common prime detected
+ BEAST (CVE-2011-3389)                     TLS1: ECDHE-RSA-AES256-SHA DHE-RSA-AES256-SHA ECDHE-RSA-AES128-SHA DHE-RSA-AES128-SHA AES256-SHA AES128-SHA DHE-RSA-CAMELLIA256-SHA CAMELLIA256-SHA DHE-RSA-CAMELLIA128-SHA CAMELLIA128-SHA
+                                           VULNERABLE -- but also supports higher protocols  TLSv1.1 TLSv1.2 (likely mitigated)
+ LUCKY13 (CVE-2013-0169), experimental     potentially VULNERABLE, uses cipher block chaining (CBC) ciphers with TLS. Check patches
+ Winshock (CVE-2014-6321), experimental    not vulnerable (OK) - CAMELLIA or ECDHE_RSA GCM ciphers found
+ RC4 (CVE-2013-2566, CVE-2015-2808)        no RC4 ciphers detected (OK)
+
+
+Можно ещё nmap использовать, чтобы посмотреть, что там на каких портах работает:
+root@vagrant:/etc/apache2# nmap -sS oootep.ru
+Starting Nmap 7.80 ( https://nmap.org ) at 2021-12-12 07:08 UTC
+Nmap scan report for oootep.ru (77.222.61.224)
+Host is up (0.051s latency).
+rDNS record for 77.222.61.224: vh1.sweb.ru
+Not shown: 951 closed ports, 44 filtered ports
+PORT     STATE SERVICE
+21/tcp   open  ftp
+22/tcp   open  ssh
+80/tcp   open  http
+443/tcp  open  https
+3306/tcp open  mysql
+
+Nmap done: 1 IP address (1 host up) scanned in 2.44 seconds
+Или с -А, там больше инфы.
+
+5. Установите на Ubuntu ssh сервер, сгенерируйте новый приватный ключ. Скопируйте свой публичный ключ на другой сервер. Подключитесь к серверу по SSH-ключу.
+Ставим:
+install openssh-server
+Включаем
+systemctl enable --now sshd
+
+Генерим ключ ssh:
+root@vagrant:~# ssh-keygen
+Generating public/private rsa key pair.
+Enter file in which to save the key (/root/.ssh/id_rsa):
+Created directory '/root/.ssh'.
+Enter passphrase (empty for no passphrase):
+Enter same passphrase again:
+Your identification has been saved in /root/.ssh/id_rsa
+Your public key has been saved in /root/.ssh/id_rsa.pub
+The key fingerprint is:
+SHA256:pIvYWDUu9Ckbe8TY4sgfmg+n0KwL8IHWM+4mT5oI058 root@vagrant
+The key's randomart image is:
++---[RSA 3072]----+
+|                 |
+|                 |
+|    . o .        |
+| ... B =         |
+|o..+B O S        |
+|o*.OoX .         |
+|= @oO o          |
+|+==X +           |
+|++B+E            |
++----[SHA256]-----+
+
+Отправляю ключ на хост юзеру cats:
+root@vagrant:~# ssh-copy-id cats@192.168.20.188
+/usr/bin/ssh-copy-id: INFO: Source of key(s) to be installed: "/root/.ssh/id_rsa.pub"
+/usr/bin/ssh-copy-id: INFO: attempting to log in with the new key(s), to filter out any that are already installed
+/usr/bin/ssh-copy-id: INFO: 1 key(s) remain to be installed -- if you are prompted now it is to install the new keys
+cats@192.168.20.188's password:
+
+Number of key(s) added: 1
+
+Now try logging into the machine, with:   "ssh 'cats@192.168.20.188'"
+and check to make sure that only the key(s) you wanted were added.
+
+Логинюсь по ssh под юзером cats без пароля:
+root@vagrant:~# ssh cats@192.168.20.188
+Last login: Mon Nov 15 21:57:21 2021
+
+6. Переименуйте файлы ключей из задания 5. Настройте файл конфигурации SSH клиента, так чтобы вход на удаленный сервер осуществлялся по имени сервера.
+Переименуем файлы ключей:
+root@vagrant:~/.ssh# mv id_rsa changed_id_rsa
+root@vagrant:~/.ssh# mv id_rsa.pub changed_id_rsa.pub
+
+Теперь без пароля не пускает по ssh подключиться.
+А вот так пустит:
+root@vagrant:~/.ssh# ssh -i ~/.ssh/changed_id_rsa cats@192.168.20.188
+Last login: Sun Dec 12 10:45:46 2021 from 192.168.20.163
+
+Теперь делаем файлик config в ~/.ssh/
+И пишем туда вот что:
+Host host-63
+        HostName 192.168.20.188
+        User cats
+        Port 22
+        IdentityFile ~/.ssh/changed_id_rsa
+
+Теперь пускает по имени хоста, с именем юзера и по тому ключу, по какому велено.
+
+7. Соберите дамп трафика утилитой tcpdump в формате pcap, 100 пакетов. Откройте файл pcap в Wireshark.
+oot@vagrant:~/.ssh# tcpdump -c 100 -w /root/dump.pcap -i eth1
+tcpdump: listening on eth1, link-type EN10MB (Ethernet), capture size 262144 bytes
+100 packets captured
+101 packets received by filter
+0 packets dropped by kernel
+
+Заберу его на хост:
+root@vagrant:~/.ssh# scp /root/dump.pcap cats@host-63:/home/cats/
+dump.pcap
+
+Ставлю [root@host-63 ~]# apt-get install wireshark
+И смотрю. Там arp запросы в основном, роутер по ssdp ищет, а потом я ping запустил. Вот, написано, откуда и куда.
+Файлик прилагаю.
+
+8*. Просканируйте хост scanme.nmap.org. Какие сервисы запущены?
+[root@host-63 ~]# nmap -sS scanme.nmap.org
+Starting Nmap 7.80 ( https://nmap.org ) at 2021-12-12 11:54 MSK
+Nmap scan report for scanme.nmap.org (45.33.32.156)
+Host is up (0.19s latency).
+Other addresses for scanme.nmap.org (not scanned): 2600:3c01::f03c:91ff:fe18:bb2f
+Not shown: 993 closed ports
+PORT      STATE    SERVICE
+22/tcp    open     ssh
+80/tcp    open     http
+135/tcp   filtered msrpc
+139/tcp   filtered netbios-ssn
+445/tcp   filtered microsoft-ds
+9929/tcp  open     nping-echo
+31337/tcp open     Elite
+
+Nmap done: 1 IP address (1 host up) scanned in 24.16 seconds
+
+Вот, все сервисы написаны и на каких портах. Также открыты ли они.
+
+9*. Установите и настройте фаервол ufw на web-сервер из задания 3. Откройте доступ снаружи только к портам 22,80,443
+Поставил, включил:
+root@vagrant:~/.ssh# ufw status
+Status: active
+
+root@vagrant:~/.ssh# ufw status
+Status: active
+
+To                         Action      From
+--                         ------      ----
+22                         ALLOW       Anywhere
+80                         ALLOW       Anywhere
+443                        ALLOW       Anywhere
+22 (v6)                    ALLOW       Anywhere (v6)
+80 (v6)                    ALLOW       Anywhere (v6)
+443 (v6)                   ALLOW       Anywhere (v6)
+
