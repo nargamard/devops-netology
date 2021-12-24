@@ -49,84 +49,38 @@ done
 ```bash
 #!/bin/bash
 
-#Исходный скрипт. Во-первых, while ((1==1) никогда не завершится, а во-вторых, там скобки не хватает. Закомментим всё.
-#while ((1==1)
-#do
-#	curl https://localhost:4757
-#	if (($? != 0))
-#	then
-#		date >> curl.log
-#	fi
-#done
+#Я просто показал, что умею пользоваться разными способами организации цикла. В следущем задании нет трёх дублирующего кода, а применён цикл.
+#Хорошо, поправить недолго. Впредь буду делать наиболее лаконичным способом не добавляя ничего лишнего.
 
-#Теперь сделаем скрипт, который проверяет доступность трёх IP: 192.168.0.1, 173.194.222.113, 87.250.250.242 по 80 порту
-#и записывает результат в файл log. Проверять доступность необходимо пять раз для каждого узла.
-
-#Очистим файл. Или сделаем пустой, если его нет.
 echo "" > log
 
-#Пусть адреса хостов из списка берутся, порт из переменной и число итераций тоже. Сделаем 3 цикла разных видов для примера.
 iplist=(192.168.0.1 173.194.222.113 87.250.250.242)
 port=80
-#Первый способ пустить цикл
-iter=5
-res=""
-iter_tmp=$iter
-while ((iter_tmp>0))
-do
-#сначала проверим, пингуется ли вообще хост, а то если нет, дальше будет долго
-	if (ping -c 1 ${iplist[0]} > /dev/null); then
-#Теперь проверим доступность порта на хосте
-		`nc -vz  ${iplist[0]} $port`
-		if (($?!=1));
-		then
-			echo $(date) Host ${iplist[0]} port $port online >> log
-		else
-			echo $(date) Host ${iplist[0]} online, but port $port closed >> log
-		fi
-	else
-		echo $(date) Host ${iplist[0]} is offline >> log
-	fi
-iter_tmp=$(($iter_tmp-1))
-done
+iter_ip=0
 
-iter_tmp=$iter
-#теперь иной цикл для второго ip
-for iter in $(seq 1 $iter_tmp)
+iter=1
+iter_ip=0
+
+while ((iter_ip<3))
 do
-        if (ping -c 1 ${iplist[1]} > /dev/null); then
-                `nc -vz  ${iplist[1]} $port`
+    for iter in $(seq 1 5)
+    do
+        if (ping -c 1 "${iplist[$(($iter_ip))]}" > /dev/null);
+        then
+                nc -vz  "${iplist[$(($iter_ip))]}" $port
                 if (($?!=1));
                 then
-                        echo $(date) Host ${iplist[1]} port $port is online >> log
+                    echo $(date) Host "${iplist[$(($iter_ip))]}" port $port online >> log
                 else
-                        echo $(date) Host ${iplist[1]} port $port is dead >> log
+                    echo $(date) Host "${iplist[$(($iter_ip))]}" online, but port $port closed >> log
                 fi
         else
-                echo $(date) Host ${iplist[0]} is offline >> log
+                echo "$(date)" Host "${iplist[$(($iter_ip))]}" is offline >> log
         fi
+    done
+iter_ip=$(($iter_ip+1))
 done
 
-
-iter_tmp=$iter
-#и третий
-count=1
-until [ $count -gt $iter_tmp ]
-do
-        if (ping -c 1 ${iplist[2]} > /dev/null); then
-                `nc -vz  ${iplist[2]} $port`
-                if (($?!=1));
-                then
-                        echo $(date) Host ${iplist[2]} port $port online >> log
-                else
-                        echo $(date) Host ${iplist[2]} online, but port $port closed >> log
-                fi
-        else
-                echo $(date) Host ${iplist[2]} is offline >> log
-        fi
-count=$(($count+1))
-echo $count
-done
 
 ```
 
@@ -137,43 +91,31 @@ done
 ```bash
 #!/bin/bash
 
-#Необходимо дописать скрипт из предыдущего задания так, чтобы он выполнялся до тех пор, пока один из узлов не окажется недоступным. Если любой из узлов недоступен - IP этого узла пишется в файл error, скрипт прерывается.
-
-set -x
-
 echo "" > log
 
-#Пусть адреса хостов из списка берутся, порт из переменной и число итераций тоже. Сделаем 3 цикла разных видов для примера.
-iplist=(192.168.20.172 173.194.222.113 87.250.250.242)
-port=22
-
-#Сделаем всё в одном цикле, чтоб огород не городить. 
+iplist=(192.168.0.1 173.194.222.113 87.250.250.242)
+port=80
 iter=0
+
 while ((1==1))
 do
-        echo "NNN"
         for iter in $(seq 0 2)
         do
-                echo "$iter"
-                sleep 3
-                #сначала проверим, пингуется ли вообще хост, а то если нет, дальше будет долго
-                echo "${iplist[$($iter)]}"
-                if (ping -c 1 "${iplist[$($iter)]}" > /dev/null);
+                if (ping -c 1 "${iplist[$(($iter))]}" > /dev/null);
                 then
-                #Теперь проверим доступность порта на хосте. Если хост доступен, тестим порт, а если отсох, то пишем это в лог и выходим.
-                nc -vz  "${iplist[$($iter)]}" $port
+                nc -vz  "${iplist[$(($iter))]}" $port
                         if (($?==1));
-                        then 
-                                #Если порт закрыт, то пишем в лог и выходим
-                                echo "$(date)" Host "${iplist[0]}" online, but port $port closed >> log
+                        then
+                                echo "$(date)" Host "${iplist[$(($iter_ip))]}" online, but port $port closed >> log
                                 exit 0
                         fi
                 else
-                        echo "$(date)" Host "${iplist[0]}" is offline >> log
+                        echo "$(date)" Host "${iplist[$(($iter_ip))]}" is offline >> log
                         exit 0
                 fi
         done
 done
+
 
 ```
 
