@@ -12,6 +12,7 @@ services:
     volumes:
       - ./backup:/backup
       - .:/var/lib/postgresql/data
+    restart: unless-stopped
     networks:
       - postgres
 
