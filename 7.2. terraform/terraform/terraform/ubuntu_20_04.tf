@@ -1,6 +1,16 @@
+locals {
+  web_intance_count_map = {
+    stage = 0
+    prod = 1
+  }
+}
+
 resource "yandex_compute_instance" "node-01" {
   name = "node-01"
   hostname                  = "node-01.netology.yc"
+  instance_type = "t3.micro"
+  count = local.web_intance_count_map[terraform.stage]
+
   resources {
     cores  = 2
     memory = 2
