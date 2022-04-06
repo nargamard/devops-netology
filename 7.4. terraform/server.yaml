@@ -1,0 +1,14 @@
+repos:
+
+- id: github.com/nargamard/netology_terraform.io #Ставим, чтобы только в моих репозиториях работало, причём только в нужном мне.
+
+  workflow: default #поставим workflow по умолчанию, дальше понадобится
+
+  allowed_overrides: [workflow] #Делаем, чтобы можно было менять команды. В предложенной инструкции сказано, что можно ещё разрешиить apply_requirements и delete_source_branch_on_merge.
+
+workflows:
+  default:
+    plan:
+      steps:
+        - plan:
+            extra_args: ["-lock=false"] #Вроде бы оно отключает блокировку
